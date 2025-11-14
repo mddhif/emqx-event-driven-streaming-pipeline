@@ -7,6 +7,7 @@ import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
 import java.sql.Timestamp;
+import java.sql.Time;
 
 @Data
 @Table("telemetry_data")
@@ -16,7 +17,7 @@ public class TelemetryData {
     private String device_id;
 
     @PrimaryKeyColumn(name = "timestamp", type = PrimaryKeyType.CLUSTERED)
-    private String timestamp;
+    private Timestamp timestamp;
 
     private double power_output;
     private double temperature;

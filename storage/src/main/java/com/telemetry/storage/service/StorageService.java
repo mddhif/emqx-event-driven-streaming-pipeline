@@ -1,11 +1,58 @@
 package com.telemetry.storage.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telemetry.storage.model.Alert;
+import com.telemetry.storage.model.TelemetryData;
+import com.telemetry.storage.repository.AlertRepository;
+import com.telemetry.storage.repository.TelemetryRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
 public class StorageService {
 
+       private final ObjectMapper objectMapper = new ObjectMapper();
+       private final TelemetryRepository telemetryRepository;
+       private final AlertRepository alertRepository;
 
+       public StorageService(TelemetryRepository telemetryRepository,  AlertRepository alertRepository) {
+        this.telemetryRepository = telemetryRepository;
+        this.alertRepository = alertRepository;
+       }
+
+    @KafkaListener(topics = "telemetry.processed", groupId = "storage-service")
+    public void handleTelemetry(String msg) {
+        try {
+            TelemetryData telemetryData = objectMapper.readValue(msg, TelemetryData.class);
+            log.info("telemetry received: {}", msg);
+            log.info("Saving to cassandra DB ...");
+            telemetryRepository.save(telemetryData);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @KafkaListener(topics = "telemetry.alerts", groupId = "storage-service")
+    public void handleAlert(String msg) {
+        try {
+            TelemetryData telemetryData = objectMapper.readValue(msg, TelemetryData.class);
+            log.info("alert received: {}", msg);
+
+            Alert alert = Alert.builder()
+                    .deviceId(telemetryData.getDevice_id())
+                    .timestamp(telemetryData.getTimestamp())
+                    .powerOutput(telemetryData.getPower_output())
+                    .severity(telemetryData.getFlag())
+                    .message("Power output below 100W")
+                    .build();
+
+            log.info("Saving to postgresql DB ...");
+            alertRepository.save(alert);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

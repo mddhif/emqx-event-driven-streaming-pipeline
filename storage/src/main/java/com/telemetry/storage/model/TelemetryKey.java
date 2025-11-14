@@ -5,6 +5,8 @@ import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyClass;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 
+import java.sql.Timestamp;
+
 @Data
 @PrimaryKeyClass
 public class TelemetryKey {
@@ -13,6 +15,6 @@ public class TelemetryKey {
     private String deviceId;
 
     @PrimaryKeyColumn(name = "timestamp", type = PrimaryKeyType.CLUSTERED)
-    private String timestamp;
+    private Timestamp timestamp;
 
 }
