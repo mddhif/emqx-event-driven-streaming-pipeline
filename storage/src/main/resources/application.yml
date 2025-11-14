@@ -15,6 +15,10 @@ spring:
             value:
               default:
                 type: com.telemetry.alert.model.TelemetryData
+    producer:
+      bootstrap-servers: localhost:29092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   cassandra:
       contact-points: localhost
       port: 9042

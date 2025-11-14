@@ -7,6 +7,7 @@ import com.telemetry.storage.repository.AlertRepository;
 import com.telemetry.storage.repository.TelemetryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,10 +17,14 @@ public class StorageService {
        private final ObjectMapper objectMapper = new ObjectMapper();
        private final TelemetryRepository telemetryRepository;
        private final AlertRepository alertRepository;
+       private final KafkaTemplate<String, Alert> kafkaTemplate;
 
-       public StorageService(TelemetryRepository telemetryRepository,  AlertRepository alertRepository) {
+       public StorageService(TelemetryRepository telemetryRepository,
+                             AlertRepository alertRepository,
+                             KafkaTemplate<String, Alert> kafkaTemplate) {
         this.telemetryRepository = telemetryRepository;
         this.alertRepository = alertRepository;
+        this.kafkaTemplate = kafkaTemplate;
        }
 
     @KafkaListener(topics = "telemetry.processed", groupId = "storage-service")
@@ -50,9 +55,18 @@ public class StorageService {
 
             log.info("Saving to postgresql DB ...");
             alertRepository.save(alert);
+            log.info("Publishing to alert stored topic ...");
+            sendAlert("telemetry.stored", alert);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+
+    }
+
+    public void sendAlert(String topic, Alert alert) {
+           log.info("Sending alert to topic {}", topic);
+           kafkaTemplate.send(topic, alert);
     }
 }
