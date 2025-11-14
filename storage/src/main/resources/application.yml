@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: Storage Service
+  config:
+    import: optional:file:.env[.properties]
+  kafka:
+    consumer:
+      bootstrap-servers: localhost:29092
+      group-id: alert-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring:
+          json:
+            value:
+              default:
+                type: com.telemetry.alert.model.TelemetryData
+  cassandra:
+      contact-points: localhost
+      port: 9042
+      keyspace-name: ${CASSANDRA_KEYSPACE}
+      schema-action: create_if_not_exists
+      local-datacenter: ${CASSANDRA_DC}
+
+  datasource:
+      url: ${POSTGRES_URL}
+      username: ${POSTGRES_USER}
+      password: ${POSTGRES_PASS}
+      driver-class-name: org.postgresql.Driver
+  jpa:
+      hibernate:
+        ddl-auto: update
