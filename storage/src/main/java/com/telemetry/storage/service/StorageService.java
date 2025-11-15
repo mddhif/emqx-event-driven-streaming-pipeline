@@ -19,12 +19,12 @@ public class StorageService {
        private final ObjectMapper objectMapper = new ObjectMapper();
        private final TelemetryRepository telemetryRepository;
        private final AlertRepository alertRepository;
-       private final KafkaTemplate<String, Alert> kafkaTemplate;
+       private final KafkaTemplate<String, Object> kafkaTemplate;
        private final RabbitTemplate rabbitTemplate;
 
        public StorageService(TelemetryRepository telemetryRepository,
                              AlertRepository alertRepository,
-                             KafkaTemplate<String, Alert> kafkaTemplate,
+                             KafkaTemplate<String, Object> kafkaTemplate,
                              RabbitTemplate rabbitTemplate) {
         this.telemetryRepository = telemetryRepository;
         this.alertRepository = alertRepository;
@@ -39,6 +39,9 @@ public class StorageService {
             log.info("telemetry received: {}", msg);
             log.info("Saving to cassandra DB ...");
             telemetryRepository.save(telemetryData);
+            // feed live stream (for the rest api service)
+            publishToLiveStream("telemetry.live", telemetryData);
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -64,7 +67,7 @@ public class StorageService {
 
             // let alert service know
             //sendAlert("telemetry.stored", alert);
-            publishAlert(alert);
+            publishAlertToRabbit(alert);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -78,7 +81,7 @@ public class StorageService {
            kafkaTemplate.send(topic, alert);
     }
 
-    public void publishAlert(Alert alert) {
+    public void publishAlertToRabbit(Alert alert) {
 
            log.info("Publishing Alert ...");
             rabbitTemplate.convertAndSend(
@@ -86,5 +89,10 @@ public class StorageService {
                     RabbitConfig.ROUTING_KEY,
                     alert
             );
+    }
+
+    public void publishToLiveStream(String topic, TelemetryData telemetryData) {
+           log.info("Publishing to topic {}", topic);
+           kafkaTemplate.send(topic, telemetryData);
     }
 }
