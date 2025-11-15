@@ -1,6 +1,8 @@
 spring:
   application:
       name: Alert Service
+  config:
+    import: optional:file:.env[.properties]
   kafka:
     consumer:
       bootstrap-servers: localhost:29092
@@ -15,3 +17,8 @@ spring:
                 type: com.telemetry.alert.model.Alert
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASS}

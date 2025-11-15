@@ -1,11 +1,13 @@
 package com.telemetry.storage.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telemetry.storage.Config.RabbitConfig;
 import com.telemetry.storage.model.Alert;
 import com.telemetry.storage.model.TelemetryData;
 import com.telemetry.storage.repository.AlertRepository;
 import com.telemetry.storage.repository.TelemetryRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -18,13 +20,16 @@ public class StorageService {
        private final TelemetryRepository telemetryRepository;
        private final AlertRepository alertRepository;
        private final KafkaTemplate<String, Alert> kafkaTemplate;
+       private final RabbitTemplate rabbitTemplate;
 
        public StorageService(TelemetryRepository telemetryRepository,
                              AlertRepository alertRepository,
-                             KafkaTemplate<String, Alert> kafkaTemplate) {
+                             KafkaTemplate<String, Alert> kafkaTemplate,
+                             RabbitTemplate rabbitTemplate) {
         this.telemetryRepository = telemetryRepository;
         this.alertRepository = alertRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.rabbitTemplate = rabbitTemplate;
        }
 
     @KafkaListener(topics = "telemetry.processed", groupId = "storage-service")
@@ -56,7 +61,10 @@ public class StorageService {
             log.info("Saving to postgresql DB ...");
             alertRepository.save(alert);
             log.info("Publishing to alert stored topic ...");
-            sendAlert("telemetry.stored", alert);
+
+            // let alert service know
+            //sendAlert("telemetry.stored", alert);
+            publishAlert(alert);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -68,5 +76,15 @@ public class StorageService {
     public void sendAlert(String topic, Alert alert) {
            log.info("Sending alert to topic {}", topic);
            kafkaTemplate.send(topic, alert);
+    }
+
+    public void publishAlert(Alert alert) {
+
+           log.info("Publishing Alert ...");
+            rabbitTemplate.convertAndSend(
+                    RabbitConfig.EXCHANGE,
+                    RabbitConfig.ROUTING_KEY,
+                    alert
+            );
     }
 }
