@@ -1,5 +1,6 @@
 package com.telemetry.storage.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telemetry.storage.Config.RabbitConfig;
 import com.telemetry.storage.model.Alert;
@@ -8,6 +9,7 @@ import com.telemetry.storage.repository.AlertRepository;
 import com.telemetry.storage.repository.TelemetryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -21,15 +23,18 @@ public class StorageService {
        private final AlertRepository alertRepository;
        private final KafkaTemplate<String, Object> kafkaTemplate;
        private final RabbitTemplate rabbitTemplate;
+       private final RedisTemplate<String, String> redisTemplate;
 
        public StorageService(TelemetryRepository telemetryRepository,
                              AlertRepository alertRepository,
                              KafkaTemplate<String, Object> kafkaTemplate,
-                             RabbitTemplate rabbitTemplate) {
+                             RabbitTemplate rabbitTemplate,
+                             RedisTemplate<String, String> redisTemplate) {
         this.telemetryRepository = telemetryRepository;
         this.alertRepository = alertRepository;
         this.kafkaTemplate = kafkaTemplate;
         this.rabbitTemplate = rabbitTemplate;
+        this.redisTemplate = redisTemplate;
        }
 
     @KafkaListener(topics = "telemetry.processed", groupId = "storage-service")
@@ -39,6 +44,7 @@ public class StorageService {
             log.info("telemetry received: {}", msg);
             log.info("Saving to cassandra DB ...");
             telemetryRepository.save(telemetryData);
+            storeTelemetryInCache(telemetryData);
             // feed live stream (for the rest api service)
             publishToLiveStream("telemetry.live", telemetryData);
 
@@ -94,5 +100,19 @@ public class StorageService {
     public void publishToLiveStream(String topic, TelemetryData telemetryData) {
            log.info("Publishing to topic {}", topic);
            kafkaTemplate.send(topic, telemetryData);
+    }
+
+    public void storeTelemetryInCache(TelemetryData telemetryData) throws JsonProcessingException {
+
+            log.info("Storing telemetry in cache ...");
+            String key = "telemetry:" + telemetryData.getDevice_id();
+            long score = telemetryData.getTimestamp().getTime();
+
+            redisTemplate.opsForZSet().add(
+                    key,
+                    objectMapper.writeValueAsString(telemetryData),
+                    score
+            );
+
     }
 }

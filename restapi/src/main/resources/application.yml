@@ -18,3 +18,7 @@ spring:
                 type: com.telemetry.restapi.model.TelemetryData
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
