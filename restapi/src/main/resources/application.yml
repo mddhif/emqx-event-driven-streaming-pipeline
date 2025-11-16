@@ -11,11 +11,6 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       
       properties:
-        spring:
-          json:
-            value:
-              default:
-                type: com.telemetry.restapi.model.TelemetryData
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: false
   data:

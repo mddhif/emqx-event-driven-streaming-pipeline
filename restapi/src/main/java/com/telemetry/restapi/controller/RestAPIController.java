@@ -2,16 +2,15 @@ package com.telemetry.restapi.controller;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telemetry.restapi.model.Alert;
 import com.telemetry.restapi.model.TelemetryData;
+import com.telemetry.restapi.service.AlertStream;
 import com.telemetry.restapi.service.TelemetryStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.util.Collections;
@@ -26,12 +25,20 @@ import java.util.Set;
 public class RestAPIController {
 
     private final TelemetryStream  telemetryStream;
+    private final AlertStream alertStream;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping(value = "/telemetry/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @CrossOrigin(origins = "*")
     public Flux<TelemetryData> streamTelemetry() {
         return telemetryStream.getFlux();
+    }
+
+    @GetMapping(value = "/alerts/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @CrossOrigin(origins = "*")
+    public Flux<Alert> streamAlerts() {
+        return alertStream.getFlux();
     }
 
     @GetMapping("/telemetry/{deviceId}")

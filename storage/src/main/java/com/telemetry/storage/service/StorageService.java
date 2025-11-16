@@ -69,7 +69,9 @@ public class StorageService {
 
             log.info("Saving to postgresql DB ...");
             alertRepository.save(alert);
-            log.info("Publishing to alert stored topic ...");
+
+            log.info("Publishing to alerts live stream ...");
+            publishToLiveStream("telemetry.alerts.live", alert);
 
             // let alert service know
             //sendAlert("telemetry.stored", alert);
@@ -97,10 +99,12 @@ public class StorageService {
             );
     }
 
-    public void publishToLiveStream(String topic, TelemetryData telemetryData) {
-           log.info("Publishing to topic {}", topic);
-           kafkaTemplate.send(topic, telemetryData);
+    public void publishToLiveStream(String topic, Object data) {
+           
+           log.info("Publishing {} to topic {}", data.getClass().getName(), topic);
+           kafkaTemplate.send(topic, data);
     }
+
 
     public void storeTelemetryInCache(TelemetryData telemetryData) throws JsonProcessingException {
 
